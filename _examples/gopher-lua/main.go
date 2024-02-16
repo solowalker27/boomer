@@ -138,7 +138,7 @@ func waitForQuit() {
 		wg.Done()
 	}()
 
-	boomer.Events.Subscribe(EVENT_QUIT, func() {
+	boomer.Events.Subscribe(boomer.EVENT_QUIT, func() {
 		if !quitByMe {
 			wg.Done()
 		}
@@ -183,7 +183,7 @@ func main() {
 	globalBoomer.Run(task)
 
 	waitForQuit()
-	log.Println("shut down")
+	log.Println("shutdown")
 }
 
 func init() {

@@ -1,4 +1,4 @@
-# boomer [![Build Status](https://travis-ci.org/myzhan/boomer.svg?branch=master)](https://travis-ci.org/myzhan/boomer) [![Go Report Card](https://goreportcard.com/badge/github.com/myzhan/boomer)](https://goreportcard.com/report/github.com/myzhan/boomer) [![Coverage Status](https://codecov.io/gh/myzhan/boomer/branch/master/graph/badge.svg)](https://codecov.io/gh/myzhan/boomer) [![Documentation Status](https://readthedocs.org/projects/boomer/badge/?version=latest)](https://boomer.readthedocs.io/en/latest/?badge=latest)
+# boomer [![Build Status](https://github.com/myzhan/boomer/actions/workflows/unittest.yml/badge.svg)](https://github.com/myzhan/boomer/actions) [![Go Report Card](https://goreportcard.com/badge/github.com/myzhan/boomer)](https://goreportcard.com/report/github.com/myzhan/boomer) [![Coverage Status](https://codecov.io/gh/myzhan/boomer/branch/master/graph/badge.svg)](https://codecov.io/gh/myzhan/boomer) [![Documentation Status](https://readthedocs.org/projects/boomer/badge/?version=latest)](https://boomer.readthedocs.io/en/latest/?badge=latest)
 
 ## Links
 
@@ -26,14 +26,14 @@ If locust introduces breaking changes, boomer will have a tagged version that wo
 
 ```bash
 # Install the master branch
-$ go get github.com/myzhan/boomer
+$ go get github.com/myzhan/boomer@master
 # Install a tagged version that works with locust 1.6.0
 $ go get github.com/myzhan/boomer@v1.6.0
 ```
 
 ### Build
 
-Boomer use [gomq](https://github.com/zeromq/gomq) by default, which is a pure Go implementation of the ZeroMQ protocol.
+Boomer use [gomq](https://github.com/myzhan/gomq) by default, which is a pure Go implementation of the ZeroMQ protocol.
 
 Because of the instability of gomq, you can switch to [goczmq](https://github.com/zeromq/goczmq).
 
@@ -47,7 +47,7 @@ $ go build -tags 'goczmq' -o a.out main.go
 If you fail to compile boomer with gomq, try to update gomq first.
 
 ```bash
-$ go get -u github.com/zeromq/gomq
+$ go get -u github.com/myzhan/gomq
 ```
 
 ## Examples(main.go)

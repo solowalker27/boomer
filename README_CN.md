@@ -1,4 +1,4 @@
-# boomer [![Build Status](https://travis-ci.org/myzhan/boomer.svg?branch=master)](https://travis-ci.org/myzhan/boomer) [![Go Report Card](https://goreportcard.com/badge/github.com/myzhan/boomer)](https://goreportcard.com/report/github.com/myzhan/boomer) [![Coverage Status](https://codecov.io/gh/myzhan/boomer/branch/master/graph/badge.svg)](https://codecov.io/gh/myzhan/boomer) [Documentation Status](https://readthedocs.org/projects/boomer/badge/?version=latest)](https://boomer.readthedocs.io/en/latest/?badge=latest)
+# boomer [![Build Status](https://github.com/myzhan/boomer/actions/workflows/unittest.yml/badge.svg)](https://github.com/myzhan/boomer/actions) [![Go Report Card](https://goreportcard.com/badge/github.com/myzhan/boomer)](https://goreportcard.com/report/github.com/myzhan/boomer) [![Coverage Status](https://codecov.io/gh/myzhan/boomer/branch/master/graph/badge.svg)](https://codecov.io/gh/myzhan/boomer) [![Documentation Status](https://readthedocs.org/projects/boomer/badge/?version=latest)](https://boomer.readthedocs.io/en/latest/?badge=latest)
 
 ## boomer是什么？
 
@@ -14,7 +14,7 @@ boomer 的版本号跟随 locust 的版本，如果 locust 引入不兼容的改
 
 ```bash
 # 安装 master 分支
-$ go get github.com/myzhan/boomer
+$ go get github.com/myzhan/boomer@master
 # 安装 v1.6.0 版本
 $ go get github.com/myzhan/boomer@v1.6.0
 ```
@@ -34,7 +34,7 @@ $ go build -tags 'goczmq' -o a.out main.go
 如果使用 gomq 编译失败，先尝试更新 gomq 的版本。
 
 ```bash
-$ go get -u github.com/zeromq/gomq
+$ go get -u github.com/myzhan/gomq
 ```
 
 ## 例子(main.go)

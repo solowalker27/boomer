@@ -11,6 +11,13 @@ import (
 	"github.com/myzhan/boomer"
 )
 
+var (
+	host   = "http://localhost:8086"
+	token  = "my-super-secret-auth-token"
+	org    = "my-org"
+	bucket = "my-bucket"
+)
+
 func waitForQuit() {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -34,7 +41,7 @@ func waitForQuit() {
 	wg.Wait()
 }
 
-var globalBoomer = boomer.NewBoomer("127.0.0.1", 5557)
+var globalBoomer = boomer.NewBoomer("localhost", 5557)
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
@@ -67,7 +74,7 @@ func main() {
 		Name: "TaskSet",
 		Fn:   ts.Run,
 	}
-
+	globalBoomer.AddOutput(boomer.NewInfluxOutput(host, token, org, bucket))
 	globalBoomer.Run(task)
 
 	waitForQuit()

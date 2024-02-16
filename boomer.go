@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-var defaultBoomer = &Boomer{}
+var defaultBoomer = &Boomer{logger: log.Default()}
 
 // Mode is the running mode of boomer, both standalone and distributed are supported.
 type Mode int
@@ -24,6 +24,7 @@ const (
 
 // A Boomer is used to run tasks.
 // This type is exposed, so users can create and control a Boomer instance programmatically.
+// A non-nil logger is supposed to be set.
 type Boomer struct {
 	masterHost  string
 	masterPort  int
@@ -35,13 +36,15 @@ type Boomer struct {
 	spawnCount  int
 	spawnRate   float64
 
-	cpuProfile         string
+	cpuProfileFile     string
 	cpuProfileDuration time.Duration
 
-	memoryProfile         string
+	memoryProfileFile     string
 	memoryProfileDuration time.Duration
 
 	outputs []Output
+
+	logger *log.Logger
 }
 
 // NewBoomer returns a new Boomer.
@@ -50,6 +53,7 @@ func NewBoomer(masterHost string, masterPort int) *Boomer {
 		masterHost: masterHost,
 		masterPort: masterPort,
 		mode:       DistributedMode,
+		logger:     log.Default(),
 	}
 }
 
@@ -59,7 +63,24 @@ func NewStandaloneBoomer(spawnCount int, spawnRate float64) *Boomer {
 		spawnCount: spawnCount,
 		spawnRate:  spawnRate,
 		mode:       StandaloneMode,
+		logger:     log.Default(),
 	}
+}
+
+// WithLogger allows user to use their own logger.
+// If the logger is nil, it will not take effect.
+func (b *Boomer) WithLogger(logger *log.Logger) *Boomer {
+	if logger == nil {
+		return b
+	}
+	b.logger = logger
+	if b.slaveRunner != nil {
+		b.slaveRunner.setLogger(logger)
+	}
+	if b.localRunner != nil {
+		b.localRunner.setLogger(logger)
+	}
+	return b
 }
 
 // SetRateLimiter allows user to use their own rate limiter.
@@ -76,7 +97,7 @@ func (b *Boomer) SetMode(mode Mode) {
 	case StandaloneMode:
 		b.mode = StandaloneMode
 	default:
-		log.Println("Invalid mode, ignored!")
+		b.logger.Println("Invalid mode, ignored!")
 	}
 }
 
@@ -86,47 +107,51 @@ func (b *Boomer) AddOutput(o Output) {
 }
 
 // EnableCPUProfile will start cpu profiling after run.
-func (b *Boomer) EnableCPUProfile(cpuProfile string, duration time.Duration) {
-	b.cpuProfile = cpuProfile
+func (b *Boomer) EnableCPUProfile(cpuProfileFile string, duration time.Duration) {
+	b.cpuProfileFile = cpuProfileFile
 	b.cpuProfileDuration = duration
 }
 
 // EnableMemoryProfile will start memory profiling after run.
-func (b *Boomer) EnableMemoryProfile(memoryProfile string, duration time.Duration) {
-	b.memoryProfile = memoryProfile
+func (b *Boomer) EnableMemoryProfile(memoryProfileFile string, duration time.Duration) {
+	b.memoryProfileFile = memoryProfileFile
 	b.memoryProfileDuration = duration
 }
 
 // Run accepts a slice of Task and connects to the locust master.
 func (b *Boomer) Run(tasks ...*Task) {
-	if b.cpuProfile != "" {
-		err := StartCPUProfile(b.cpuProfile, b.cpuProfileDuration)
+	if b.cpuProfileFile != "" {
+		err := StartCPUProfile(b.cpuProfileFile, b.cpuProfileDuration)
 		if err != nil {
-			log.Printf("Error starting cpu profiling, %v", err)
+			b.logger.Printf("Error starting cpu profiling, %v", err)
 		}
 	}
-	if b.memoryProfile != "" {
-		err := StartMemoryProfile(b.memoryProfile, b.memoryProfileDuration)
+	if b.memoryProfileFile != "" {
+		err := StartMemoryProfile(b.memoryProfileFile, b.memoryProfileDuration)
 		if err != nil {
-			log.Printf("Error starting memory profiling, %v", err)
+			b.logger.Printf("Error starting memory profiling, %v", err)
 		}
 	}
 
 	switch b.mode {
 	case DistributedMode:
 		b.slaveRunner = newSlaveRunner(b.masterHost, b.masterPort, tasks, b.rateLimiter)
+		b.slaveRunner.setLogger(b.logger)
+		b.logger.Println("new slave runner")
 		for _, o := range b.outputs {
 			b.slaveRunner.addOutput(o)
 		}
 		b.slaveRunner.run()
 	case StandaloneMode:
 		b.localRunner = newLocalRunner(tasks, b.rateLimiter, b.spawnCount, b.spawnRate)
+		b.localRunner.setLogger(b.logger)
+		b.logger.Println("new local runner")
 		for _, o := range b.outputs {
 			b.localRunner.addOutput(o)
 		}
 		b.localRunner.run()
 	default:
-		log.Println("Invalid mode, expected boomer.DistributedMode or boomer.StandaloneMode")
+		b.logger.Println("Invalid mode, expected boomer.DistributedMode or boomer.StandaloneMode")
 	}
 }
 
@@ -176,6 +201,18 @@ func (b *Boomer) RecordFailure(requestType, name string, responseTime int64, exc
 	}
 }
 
+func (b *Boomer) SendCustomMessage(messageType string, data interface{}) {
+	if b.localRunner == nil && b.slaveRunner == nil {
+		return
+	}
+	switch b.mode {
+	case DistributedMode:
+		b.slaveRunner.sendCustomMessage(messageType, data)
+	case StandaloneMode:
+		b.localRunner.sendCustomMessage(messageType, data)
+	}
+}
+
 // Quit will send a quit message to the master.
 func (b *Boomer) Quit() {
 	Events.Publish(EVENT_QUIT)
@@ -188,7 +225,7 @@ func (b *Boomer) Quit() {
 		case <-b.slaveRunner.client.disconnectedChannel():
 			break
 		case <-ticker.C:
-			log.Println("Timeout waiting for sending quit message to master, boomer will quit any way.")
+			b.logger.Println("Timeout waiting for sending quit message to master, boomer will quit any way.")
 			break
 		}
 		b.slaveRunner.shutdown()
@@ -235,8 +272,8 @@ func Run(tasks ...*Task) {
 	defaultBoomer.SetRateLimiter(rateLimiter)
 	defaultBoomer.masterHost = masterHost
 	defaultBoomer.masterPort = masterPort
-	defaultBoomer.EnableMemoryProfile(memoryProfile, memoryProfileDuration)
-	defaultBoomer.EnableCPUProfile(cpuProfile, cpuProfileDuration)
+	defaultBoomer.EnableMemoryProfile(memoryProfileFile, memoryProfileDuration)
+	defaultBoomer.EnableCPUProfile(cpuProfileFile, cpuProfileDuration)
 
 	defaultBoomer.Run(tasks...)
 
@@ -259,7 +296,7 @@ func Run(tasks ...*Task) {
 	case <-quitChan:
 	}
 
-	log.Println("shut down")
+	log.Println("shutdown")
 }
 
 // RecordSuccess reports a success.
